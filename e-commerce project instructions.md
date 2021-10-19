@@ -78,3 +78,21 @@
     ```
 
 3. Make and apply migrations
+
+## Set up the Admin
+
+1. Create the CategoryAdmin class
+   - List the name and slug fields
+   - Prepopulate the slug from the name
+   ```python
+   class CategoryAdmin(admin.ModelAdmin):
+       list_display = ['name', 'slug']
+       prepopulated_fields = {'slug': ('name',)}
+   ```
+2. Create the ProductAdmin class
+ - List everything except the image and description
+ - Filter for the appropriate fields
+ - Make the **price** and **available** editable (Hint: **list_editable**)
+ - Prepopulate the slug
+3. Register the classes
+4. Don't forget to set up a superuser
