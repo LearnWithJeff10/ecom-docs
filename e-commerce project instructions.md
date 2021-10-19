@@ -136,3 +136,119 @@ Django has a convention that the method get_absolute_url() will return the URL f
       return reverse('shop:product_detail',
       args=[self.id, self.slug])
    ```
+
+
+## Create templates for your views
+
+Be sure your templates are in the product template directory for the shop application indicated below.
+
+1. Create the base.html template in `shop\templates\shop\` as follows:
+   ```html
+   {% load static %}
+    <!DOCTYPE html>
+    <html>
+
+    <head>
+    <meta charset="utf-8" />
+    <title>{% block title %}My shop{% endblock %}</title>
+    <link href="{% static " css/base.css" %}" rel="stylesheet">
+    </head>
+
+    <body>
+    <div id="header">
+        <a href="/" class="logo">My shop</a>
+    </div>
+    <div id="subheader">
+        <div class="cart">
+        Your cart is empty.
+        </div>
+    </div>
+    <div id="content">
+        {% block content %}
+        {% endblock %}
+    </div>
+    </body>
+
+    </html>
+   ```
+2. Create the list.html product in the  `shop\templates\shop\product` as follows:
+   ```html
+   #TBD1
+    {% block content %}
+    <div id="sidebar">
+    <h3>Categories</h3>
+    <ul>
+        <li {% if not category %}class="selected" {% endif %}>
+        <a href="{% url " shop:product_list" %}">All</a>
+        </li>
+        #TBD2
+    </ul>
+    </div>
+    <div id="main" class="product-list">
+    <h1>{% if category %}{{ category.name }}{% else %}Products
+        {% endif %}</h1>
+    {% for product in products %}
+    <div class="item">
+        <a href="{{ product.get_absolute_url }}">
+        <img src="{% if product.image %}{{ product.image.url }}{%
+    else %}{% static " img/no_image.png" %}{% endif %}">
+        </a>
+        <a href="{{ product.get_absolute_url }}">{{ product.name }}</ a>
+        <br>
+        ${{ product.price }}
+    </div>
+    {% endfor %}
+    </div>
+    {% endblock %}
+   ```
+3. Include the requisite Django instructions to include static files and define a block called title at #TBD1
+4. Provide a default title using the category.name if one exists or "Products" if it does not
+5. Complete the code for the categories at #TBD2. If the category.slug matches the slug for the current list item, then set the HTML attribute to select that item
+6. Copy the resource files provided to the `static` directory of the shop application
+7. Add the following code to settings.py
+    ```python
+    MEDIA_URL = '/media/'
+    MEDIA_ROOT = os.path.join(BASE_DIR, 'media/')
+    ```
+8. Add the following code to the main urls.py file to support media:
+   ```python
+    from django.conf import settings
+    from django.conf.urls.static import static
+    urlpatterns = [
+        # ...
+    ]
+    if settings.DEBUG:
+        urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+   ```
+9. If you want to, go ahead and test the product view now (see below)
+10. Add the detail_view.html template in the same folder as list.html as follows:
+    ```html
+    {% extends "shop/base.html" %}
+    {% load static %}
+    {% block title %}
+    {{ product.name }}
+    {% endblock %}
+    {% block content %}
+    <div class="product-detail">Chapter 7
+    <img src="{% if product.image %}{{ product.image.url }}{% else %}
+    {% static " img/no_image.png" %}{% endif %}">
+    <h1>{{ product.name }}</h1>
+    <h2>
+        <a href="{{ product.category.get_absolute_url }}">
+        {{ product.category }}
+        </a>
+    </h2>
+    <p class="price">${{ product.price }}</p>
+    {{ product.description|linebreaks }}
+    </div>
+    {% endblock %}
+    ```
+## Test the views
+Run your server and add a couple of products using the admin site. Be sure to include some pictures. If you do not include a picture then the page will display a "no image available" image. 
+
+### Your list page should look like
+![Product page](lab_images/products1.jpg)
+
+### Your detail page should look like
+![Detail page](lab_images/detail1.jpg)
+ 
