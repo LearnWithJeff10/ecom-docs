@@ -96,3 +96,43 @@
  - Prepopulate the slug
 3. Register the classes
 4. Don't forget to set up a superuser
+
+## Build Views for the models in the shop application
+
+1. Create the product_list view
+   This view should display all available products or, if passed a category_slug, then it should display the products filtered by it
+2. Create the product_detail view
+   This view should display a single product by id. Additionally, it should accept and use a
+   slug (this helps build SEO-friendly URLs) and return only available products
+
+## Build the urls
+
+Each path should have an internal name that matches the view name unless otherwise specified
+
+1. The default path should resolve to product_list
+2. The path category_slug should resolve to product_list. Call this product_list_by_category internally
+3. The path id/slug should resolve to product_detail
+4. Don't forget to reference the shop urls in the main url file
+
+## Add the get_absolute_url methods to each model
+
+Django has a convention that the method get_absolute_url() will return the URL for a given object
+
+1. Modify the model classes using the following code
+
+   ```python
+   from django.urls import reverse
+   # ...
+
+   class Category(models.Model):
+      # ...
+   def get_absolute_url(self):
+      return reverse('shop:product_list_by_category',
+      args=[self.slug])
+
+   class Product(models.Model):
+      # ...
+      def get_absolute_url(self):
+      return reverse('shop:product_detail',
+      args=[self.id, self.slug])
+   ```
