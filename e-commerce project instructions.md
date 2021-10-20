@@ -252,3 +252,80 @@ Run your server and add a couple of products using the admin site. Be sure to in
 ### Your detail page should look like
 ![Detail page](lab_images/detail1.jpg)
  
+# Build a shopping cart
+## How to use sessions
+The shopping cart will utilize [Django sessions](https://docs.djangoproject.com/en/3.2/topics/http/sessions/), so be sure that the MIDDLEWARE setting of your project contains `django.contrib.sessions.middleware.SessionMiddleware`. Session is accessed like a dictionary as follows:
+```python
+request.session['foo'] = 'bar'      # write
+foo = request.session['foo']        # read 
+foo = request.session.get('foo')    # read (gets None if nonexistant) 
+del request.session['foo']          # delete
+```
+By using sessions, we get rapid access to temporary data that will delete itself automatically either when the browser closes (`SESSION_EXPIRE_AT_BROWSER_CLOSE`) or at the end of the period set in `SESSION_COOKIE_AGE`. 
+## Shopping cart design
+- Create a cart when needed if none exists; otherwise use existing cart
+- Store price in cart to insulate against price changes
+## Implement the shopping cart
+1. Create a shopping cart app called `cart`
+2. Store the session id for the shopping cart in `settings.py` in a `CART_SESSION_ID` variable. Pick an appropriate id, i.e. `'cart'`.
+3. Create a `cart.py` file in the cart application with a constructor as follows:
+```python
+from decimal import Decimal
+from django.conf import settings
+from shop.models import Product
+
+class Cart(object):
+    def __init__(self, request):
+    """
+    Initialize the cart.
+    """
+    self.session = request.session
+    cart = self.session.get(settings.CART_SESSION_ID)
+    if not cart:
+        # save an empty cart in the session
+        cart = self.session[settings.CART_SESSION_ID] = {}
+     self.cart = cart
+```
+4. Create an add method with the the following signature
+```python
+    def add(self, product, quantity=1, override_quantity=False):
+    """
+    Add a product to the cart or update its quantity
+        product: The product to add
+            Use the string representation of the product.id to store it into session
+        quantity: The quantity of product to add
+        override_quantity: True to replace the existing quantity, false to add to it
+    """
+    #TBD
+```
+5. Create a save method as follows:
+   ```python
+   def save(self):
+       # mark the session as "modified" to make sure it gets saved
+       self.session.modified = True
+   ```
+6. Create a remove method
+7. To enable iteration over the cart items in client code, you should create an [iterator](https://www.programiz.com/python-programming/iterator) for it as follows:
+   ```python
+   class Cart(object):
+   # ...
+   def __iter__(self):
+       """
+       Iterate over the items in the cart and get the products
+       from the database.
+       """
+       product_ids = self.cart.keys()
+       # get the product objects and add them to the cart
+       products = Product.objects.filter(id__in=product_ids)
+       cart = self.cart.copy()
+       for product in products:
+           cart[str(product.id)]['product'] = product
+       for item in cart.values():
+           item['price'] = Decimal(item['price'])
+           item['total_price'] = item['price'] * item['quantity']
+           yield item
+   ```
+8. Implement a `__len__` method for the cart that returns the total quantity of items in the cart (sum of quantity for all products)
+9. Implement a `get_total_price` method that returns the total price for the cart (sum of price * quantity)
+10. Implement a `clear` method which removes the entire shopping cart from the session
+11. 
