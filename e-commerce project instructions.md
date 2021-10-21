@@ -328,4 +328,31 @@ class Cart(object):
 8. Implement a `__len__` method for the cart that returns the total quantity of items in the cart (sum of quantity for all products)
 9. Implement a `get_total_price` method that returns the total price for the cart (sum of price * quantity)
 10. Implement a `clear` method which removes the entire shopping cart from the session
-11. 
+
+
+## Create views for the shopping cart
+1. Create a view to add an item to the cart. The view will receive the **product_id** from the url but the **quantity** and **override_quantity** will only be available as a form field via the POST. The code is provided below:
+    ```python
+    from django.shortcuts import render, redirect, get_object_or_404
+    from django.views.decorators.http import require_POST
+    from shop.models import Product
+    from .cart import Cart
+    from .forms import CartAddProductForm
+    @require_POST
+    def cart_add(request, product_id):
+        cart = Cart(request)
+        product = get_object_or_404(Product, id=product_id)
+        form = CartAddProductForm(request.POST)
+        if form.is_valid():
+            cd = form.cleaned_data
+            cart.add(product=product, quantity=cd['quantity'], override_quantity=cd['override'])
+            return redirect('cart:cart_detail')
+    ```
+2. Implement a `cart_remove` view to remove an item from the cart
+3. Implement a `cart_detail` view to display a cart
+4. Implement urls for the cart with the following paths:
+    ```python
+    ''                  # Display the cart
+    'add/product_id'    # Add an item to the cart
+    'remove/product_id` # Remove an item from the cart
+    ```
