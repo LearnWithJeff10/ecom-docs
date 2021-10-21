@@ -513,3 +513,143 @@ The cart total needs to be displayed on all pages, so we can't use a single view
 </div>
 ```
 5. Test the cart total feature
+
+## Display cart total on all pages
+The cart total needs to be displayed on all pages, so we can't use a single view to display it. Instead, we'll add it to the *request* by using a [context processor](https://betterprogramming.pub/django-quick-tips-context-processors-da74f887f1fc). 
+1. Create a new file in the **cart** application named **context_processors.py**.
+2. Create a function in it named cart that accepts a `request` parameter and returns a dictionary with a single element having a key of `'cart'` and a value of `Cart(request)`. The **Cart** class is the model you created.
+3. Add your context processor to the `'context_processors'` list in settings.
+4. Replace the text `Your cart is empty` in your base template with the following code:
+```html
+<div class="cart">
+  {% with total_items=cart|length %}
+    {% if total_items > 0 %}
+      Your cart:
+      <a href="{% url "cart:cart_detail" %}">
+        {{ total_items }} item{{ total_items|pluralize }},
+        ${{ cart.get_total_price }}
+      </a>
+  {% else %}
+    Your cart is empty.
+  {% endif %}
+{% endwith %}
+</div>
+```
+5. Test the cart total feature
+# Place orders based on the shopping cart contents
+When a customer is finished shopping, the shopping cart data needs to be saved to the database (up to now it's been cached).
+## Create the order models
+1. Create a new app called **orders** (remember to register it)
+2. Create an **Order** model with the following characteristics (note that for string fields the max length is specified in parenthesis)
+   Fields:
+      - first_name (50)
+      - last_name (50)
+      - email
+      - address (250)
+      - postal_code (20)
+      - city (100)
+      - created (default to current time on creation)
+      - updated (default to current time on update)
+      - paid (default to False)
+    Other characteristics:
+       - Sort by most recent creation
+       - Standard string representatino should be the id
+       - Provide a method called **get_total_cost** which returns to total price of all of the items in the order (see below)
+3. Create an **OrderItem** model with the following characteristics:
+    Fields
+        - order (foreign key to above with `related_name='items'`)
+        - product (foreign key with `related_name='order_items'`)
+        - price
+        - quantity
+4. Migrate the new models
+## Add the order models to the admin site
+1. Add and register the **OrderAdmin** class which sets an appropriate list_display and list_filter
+2. To handle the OrderItem, add a class to your admin as follows:
+    ```python
+    class OrderItemInline(admin.TabularInline):
+    model = OrderItem
+    raw_id_fields = ['product']
+    ```
+3. Also add the following line to the **OrderAdmin** class:
+    ```inlines = [OrderItemInline]```
+4. Test your page at **http://127.0.0.1:8000/admin/orders/order/add/**. It should resemble the following: [AddOrder1](lab_images/AddOrder1.jpg)
+## Create the order forms
+We need forms to present to the user to allow them to place an order.
+1. Create an order form in the **orders** app (in **forms.py**) using the class-based view approach (complete code provided below):
+   ```python
+    from django import forms
+    from .models import Order
+    class OrderCreateForm(forms.ModelForm):
+    class Meta:
+    model = Order
+    fields = ['first_name', 'last_name', 'email', 'address',
+    'postal_code', 'city']
+   ```
+2. Create an **order_create** view that does the following:
+   - Create a new **Cart** object
+   - If the request is a GET, create a new empty **OrderCreateForm**
+   - If the request is a POST, create a new **OrderCreateForm** using the POST data. If the form is valid then:
+     - Save the order to the **Order** model in the database
+     - Save each of the items in the cart to the **OrderItem** model in the database being sure to include the **product**, **price**, and **quantity** and linking it to the **Order**
+3. Render the **order/create** template below. Note this should be in `templates/orders/order/create.html` in the **orders** app.
+   ```html
+    {% extends "shop/base.html" %}
+    {% load i18n %}
+
+    {% block title %}
+    {% trans "Checkout" %}
+    {% endblock %}
+
+    {% block content %}
+    <h1>{% trans "Checkout" %}</h1>
+
+    <div class="order-info">
+    <h3>{% trans "Your order" %}</h3>
+    <ul>
+        {% for item in cart %}
+        <li>
+        {{ item.quantity }}x {{ item.product.name }}
+        <span>${{ item.total_price|floatformat:2 }}</span>
+        </li>
+        {% endfor %}
+        {% if cart.coupon %}
+        <li>
+        {% blocktrans with code=cart.coupon.code discount=cart.coupon.discount %}
+            "{{ code }}" ({{ discount }}% off)
+        {% endblocktrans %}
+        <span class="neg">- ${{ cart.get_discount|floatformat:2 }}</span>
+        </li> 
+        {% endif %}
+    </ul>
+    <p>{% trans "Total" %}: ${{ cart.get_total_price_after_discount|floatformat:2 }}</p>
+    </div>
+
+    <form method="post" class="order-form">
+    {{ form.as_p }}
+    <p><input type="submit" value="{% trans "Place order" %}"></p>
+    {% csrf_token %}
+    </form>
+    {% endblock %}
+   ```
+4. Create the **order/created** template below:
+    ```html
+    {% extends "shop/base.html" %}
+    {% load i18n %}
+
+    {% block title %}
+    {% trans "Thank you" %}
+    {% endblock %}
+
+    {% block content %}
+    <h1>{% trans "Thank you" %}</h1>
+    {% blocktrans with order_id=order.id %}
+        <p>Your order has been successfully completed. Your order number is <strong>{{ order_id }}</strong>.</p>
+    {% endblocktrans %}
+    {% endblock %}
+    ```
+5. Create a URL path in the **orders** to route **create/** to the **order_create** view
+6. Add a URL path in the **myshop** project to route **orders/** to the **orders** app
+7. Test the app by populating a shopping cart and checking out. Your checkout form should resemble the following:
+   [CheckoutForm](lab_images/CheckoutForm.jpg)
+When the checkout is complete, you should see a checkout confirmation similar to
+    [CheckoutConfirmation](lab_images/CheckoutConfirmation.jpg)
