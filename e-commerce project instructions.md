@@ -472,4 +472,21 @@ class Cart(object):
 1. When viewing product detail, the Add to cart button should be visible along with a quantity selector. Your result should be simlar to this example:
 ![detail with cart button](lab_images/detail2.jpg)
 2. Adding the product to the cart should redirect to the cart view which should be similar to the following:
-![cart view](lab_images/cart2.jpg)
+![cart view](lab_images/cart2.jpg)## Improve the cart to allow the user to change quantities
+
+## Improve the cart to allow the user to change quantities
+1. Change the `cart_detail` view to create a `CartAddProductForm` for each item in the cart as follows:
+    ```python
+    def cart_detail(request):
+    cart = Cart(request)
+    for item in cart:
+        item['update_quantity_form'] = CartAddProductForm(initial={ 
+            'quantity': item['quantity'], 
+            'override': True 
+            }) 
+        return render(request, 'cart/detail.html', {'cart': cart})
+    ```
+2. Replace the line that displays the `item.quantity` in the cart detail template with a form that permits the user to change the quantity or remove it by posting it to the cart_add view
+## Test your updated shopping cart
+1. The cart should now support changing the product quantity as shown below:
+![cart3](lab_images/cart3.jpg)
