@@ -356,3 +356,120 @@ class Cart(object):
     'add/product_id'    # Add an item to the cart
     'remove/product_id` # Remove an item from the cart
     ```
+## Implement a template for the cart
+1. The template code is provided below:
+   ```python
+    {% extends "shop/base.html" %}
+    {% load static %}
+    {% load i18n %}
+
+    {% block title %}
+    {% trans "Your shopping cart" %}
+    {% endblock %}
+
+    {% block content %}
+    <h1>{% trans "Your shopping cart" %}</h1>
+    <table class="cart">
+    <thead>
+        <tr>
+        <th>{% trans "Image" %}</th>
+        <th>{% trans "Product" %}</th>
+        <th>{% trans "Quantity" %}</th>
+        <th>{% trans "Remove" %}</th>
+        <th>{% trans "Unit price" %}</th>
+        <th>{% trans "Price" %}</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for item in cart %}
+        {% with product=item.product %}
+        <tr>
+        <td>
+            <a href="{{ product.get_absolute_url }}">
+            <img src="{% if product.image %}{{ product.image.url }}
+                    {% else %}{% static "img/no_image.png" %}{% endif %}">
+            </a>
+        </td>
+        <td>{{ product.name }}</td>
+        <td>
+            <form action="{% url "cart:cart_add" product.id %}" method="post">
+            {{ item.update_quantity_form.quantity }}
+            {{ item.update_quantity_form.override }}
+            <input type="submit" value="Update">
+            {% csrf_token %}
+            </form>
+
+        </td>
+        <td>
+            <form action="{% url "cart:cart_remove" product.id %}" method="post">
+            <input type="submit" value="{% trans "Remove" %}">
+            {% csrf_token %}
+            </form>
+        </td>
+        <td class="num">${{ item.price }}</td>
+        <td class="num">${{ item.total_price }}</td>
+        </tr>
+        {% endwith %}
+        {% endfor %}
+        {% if cart.coupon %}
+        <tr class="subtotal">
+        <td>{% trans "Subtotal" %}</td>
+        <td colspan="4"></td>
+        <td class="num">${{ cart.get_total_price|floatformat:2 }}</td>
+        </tr>
+        <tr>
+        {% blocktrans with code=cart.coupon.code discount=cart.coupon.discount %}
+            <td>"{{ code }}" coupon ({{ discount }}% off)</td>
+        {% endblocktrans %}
+        <td colspan="4"></td>
+        <td class="num neg">
+            - ${{ cart.get_discount|floatformat:2 }}
+        </td>
+        </tr>
+    {% endif %}
+    <tr class="total">
+        <td>{% trans "Total" %}</td>
+        <td colspan="4"></td>
+        <td class="num">
+        ${{ cart.get_total_price_after_discount|floatformat:2 }}
+        </td>
+    </tr>
+    </tbody>
+    </table>
+    {% if recommended_products %}
+    <div class="recommendations cart">
+    <h3>{% trans "People who bought this also bought" %}</h3>
+    {% for p in recommended_products %}
+    <div class="item">
+        <a href="{{ p.get_absolute_url }}">
+        <img src="{% if p.image %}{{ p.image.url }}{% else %}
+        {% static " img/no_image.png" %}{% endif %}">
+        </a>
+        <p><a href="{{ p.get_absolute_url }}">{{ p.name }}</a></p>
+    </div>
+    {% endfor %}
+    </div>
+    {% endif %}
+    <p>{% trans "Apply a coupon" %}</p>
+    <form action="{% url "coupons:apply" %}" method="post"
+    {{ coupon_apply_form }}
+    <input type="submit" value="Apply">
+    {% csrf_token %}
+    </form>
+    <p class="text-right">
+    <a href="{% url "shop:product_list" %}" class="button light">{% trans "Continue shopping" %}</a>
+    <a href="{% url "orders:order_create" %}" class="button">
+        {% trans "Checkout" %}
+    </a>
+    </p>
+    {% endblock %}
+    ```
+## Utilize the cart in the product detail view
+1. Add code to create the the product form and pass it to the shop/product/detail template for rendering
+2. Add a form to the detail template to render the form
+3. Also add a button to add the product to the cart
+## Test your shopping cart
+1. When viewing product detail, the Add to cart button should be visible along with a quantity selector. Your result should be simlar to this example:
+![detail with cart button](lab_images/detail2.jpg)
+2. Adding the product to the cart should redirect to the cart view which should be similar to the following:
+![cart view](lab_images/cart2.jpg)
