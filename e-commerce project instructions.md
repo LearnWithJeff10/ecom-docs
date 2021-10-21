@@ -490,3 +490,26 @@ class Cart(object):
 ## Test your updated shopping cart
 1. The cart should now support changing the product quantity as shown below:
 ![cart3](lab_images/cart3.jpg)
+
+## Display cart total on all pages
+The cart total needs to be displayed on all pages, so we can't use a single view to display it. Instead, we'll add it to the *request* by using a [context processor](https://betterprogramming.pub/django-quick-tips-context-processors-da74f887f1fc). 
+1. Create a new file in the **cart** application named **context_processors.py**.
+2. Create a function in it named cart that accepts a `request` parameter and returns a dictionary with a single element having a key of `'cart'` and a value of `Cart(request)`. The **Cart** class is the model you created.
+3. Add your context processor to the `'context_processors'` list in settings.
+4. Replace the text `Your cart is empty` in your base template with the following code:
+```html
+<div class="cart">
+  {% with total_items=cart|length %}
+    {% if total_items > 0 %}
+      Your cart:
+      <a href="{% url "cart:cart_detail" %}">
+        {{ total_items }} item{{ total_items|pluralize }},
+        ${{ cart.get_total_price }}
+      </a>
+  {% else %}
+    Your cart is empty.
+  {% endif %}
+{% endwith %}
+</div>
+```
+5. Test the cart total feature
